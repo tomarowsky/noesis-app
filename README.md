@@ -1,6 +1,27 @@
-# React + TypeScript + Vite
+# NOESIS — Intelligence Élitiste
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+App de données en temps réel avec parcours de progression (XP, niveaux, défis). React + TypeScript + Vite.
+
+## Lancer l'app
+
+```bash
+npm install
+npm run dev
+```
+
+## Pousser sur GitHub (première fois)
+
+1. Sur [github.com](https://github.com/new), crée un **nouveau** dépôt (ex. `noesis-app`), **sans** initialiser avec README / .gitignore.
+2. Dans le dossier du projet :
+   ```bash
+   git remote add origin https://github.com/TON_USERNAME/noesis-app.git
+   git push -u origin main
+   ```
+   (Remplace `TON_USERNAME` par ton identifiant GitHub.)
+
+---
+
+*Template initial : React + TypeScript + Vite*
 
 Currently, two official plugins are available:
 
