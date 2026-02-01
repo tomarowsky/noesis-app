@@ -1,0 +1,555 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NOESIS - Intelligence Élitiste - Design System */
+
+:root {
+  /* Couleurs de base */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  
+  /* Couleurs premium - Élitistes */
+  --primary: 220 90% 56%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 240 4% 16%;
+  --secondary-foreground: 0 0% 98%;
+  
+  --muted: 240 4% 16%;
+  --muted-foreground: 240 5% 65%;
+  
+  --accent: 220 90% 56%;
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 98%;
+  
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 98%;
+  
+  --border: 240 4% 20%;
+  --input: 240 4% 20%;
+  --ring: 220 90% 56%;
+  
+  --radius: 0.75rem;
+  
+  /* Couleurs d'accent personnalisables */
+  --accent-blue: 220 90% 56%;
+  --accent-gold: 45 100% 50%;
+  --accent-purple: 270 70% 55%;
+  --accent-emerald: 160 80% 45%;
+  --accent-rose: 340 80% 55%;
+  --accent-cyan: 190 90% 50%;
+  --accent-orange: 25 95% 55%;
+  
+  /* Rareté */
+  --rarity-common: 0 0% 60%;
+  --rarity-rare: 220 80% 60%;
+  --rarity-epic: 270 70% 60%;
+  --rarity-legendary: 45 100% 50%;
+  --rarity-mythic: 340 80% 60%;
+}
+
+/* Thème Matrix (Secret) */
+.theme-matrix {
+  --primary: 120 100% 45%;
+  --accent: 120 100% 45%;
+  --ring: 120 100% 45%;
+  --background: 0 0% 2%;
+  --card: 0 0% 4%;
+}
+
+/* Thème Néon */
+.theme-neon {
+  --primary: 300 100% 60%;
+  --accent: 180 100% 50%;
+  --ring: 300 100% 60%;
+}
+
+/* Thème Rétro */
+.theme-retro {
+  --primary: 320 100% 50%;
+  --accent: 60 100% 50%;
+  --ring: 320 100% 50%;
+  --background: 240 50% 8%;
+}
+
+/* Thème Or */
+.theme-gold {
+  --primary: 45 100% 50%;
+  --accent: 45 100% 50%;
+  --ring: 45 100% 50%;
+}
+
+/* Thème Maître */
+.theme-master {
+  --primary: 0 0% 100%;
+  --accent: 0 0% 100%;
+  --ring: 0 0% 100%;
+  --background: 0 0% 0%;
+  --card: 0 0% 5%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  background-color: hsl(var(--background));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  min-height: 100vh;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations premium */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes glow-text {
+  0%, 100% {
+    text-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+  }
+  50% {
+    text-shadow: 0 0 30px hsl(var(--primary) / 0.8), 0 0 60px hsl(var(--primary) / 0.4);
+  }
+}
+
+@keyframes matrix-rain {
+  0% {
+    transform: translateY(-100%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* Classes d'animation */
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.4s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+.animate-glow-text {
+  animation: glow-text 2s ease-in-out infinite;
+}
+
+/* Effets de verre */
+.glass {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.3);
+}
+
+.glass-strong {
+  background: hsl(var(--card) / 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border) / 0.4);
+}
+
+/* Gradients premium */
+.gradient-premium {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--accent)) 100%
+  );
+}
+
+.gradient-rainbow {
+  background: linear-gradient(
+    135deg,
+    hsl(220, 90%, 56%) 0%,
+    hsl(270, 70%, 55%) 25%,
+    hsl(320, 80%, 60%) 50%,
+    hsl(25, 95%, 55%) 75%,
+    hsl(45, 100%, 50%) 100%
+  );
+}
+
+.gradient-mesh {
+  background: 
+    radial-gradient(at 40% 20%, hsl(var(--primary) / 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsl(var(--accent) / 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsl(var(--primary) / 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsl(var(--accent) / 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsl(var(--primary) / 0.3) 0px, transparent 50%);
+}
+
+/* Bordures brillantes */
+.border-glow {
+  border: 1px solid hsl(var(--primary) / 0.5);
+  box-shadow: 
+    0 0 10px hsl(var(--primary) / 0.2),
+    inset 0 0 10px hsl(var(--primary) / 0.1);
+}
+
+/* Texte dégradé */
+.text-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--accent)) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Rareté - Couleurs */
+.rarity-common { color: hsl(var(--rarity-common)); }
+.rarity-rare { color: hsl(var(--rarity-rare)); }
+.rarity-epic { color: hsl(var(--rarity-epic)); }
+.rarity-legendary { color: hsl(var(--rarity-legendary)); }
+.rarity-mythic { color: hsl(var(--rarity-mythic)); }
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+/* Sélection */
+::selection {
+  background: hsl(var(--primary) / 0.3);
+  color: hsl(var(--foreground));
+}
+
+/* Particules canvas */
+.particles-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Layout mobile-first iOS */
+.ios-container {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Safe area pour iOS */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 44px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 34px);
+}
+
+/* Widget styles */
+.widget-card {
+  @apply relative overflow-hidden rounded-2xl p-4;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 0.5);
+  transition: all 0.3s ease;
+}
+
+.widget-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px hsl(var(--primary) / 0.1);
+}
+
+.widget-card.locked {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+
+/* Level badge */
+.level-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold;
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  color: white;
+}
+
+/* XP bar */
+.xp-bar {
+  @apply h-2 rounded-full overflow-hidden;
+  background: hsl(var(--muted));
+}
+
+.xp-bar-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+  background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+}
+
+/* Secret discovery animation */
+.secret-unlocked {
+  animation: secretUnlock 0.8s ease-out;
+}
+
+@keyframes secretUnlock {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: blur(0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Menu caché */
+.hidden-menu {
+  @apply fixed inset-0 z-50;
+  background: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(20px);
+}
+
+/* Konami code indicator */
+.konami-indicator {
+  @apply fixed bottom-4 right-4 flex gap-1;
+  opacity: 0.3;
+}
+
+.konami-key {
+  @apply w-6 h-6 rounded text-xs flex items-center justify-center;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.konami-key.active {
+  background: hsl(var(--primary));
+  color: white;
+}
+
+/* Progress ring */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-out;
+}
+
+/* Tooltip premium */
+.tooltip-premium {
+  @apply px-3 py-2 rounded-lg text-sm;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Badge de rareté */
+.rarity-badge {
+  @apply px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider;
+}
+
+.rarity-badge.common {
+  background: hsl(var(--rarity-common) / 0.2);
+  color: hsl(var(--rarity-common));
+}
+
+.rarity-badge.rare {
+  background: hsl(var(--rarity-rare) / 0.2);
+  color: hsl(var(--rarity-rare));
+}
+
+.rarity-badge.epic {
+  background: hsl(var(--rarity-epic) / 0.2);
+  color: hsl(var(--rarity-epic));
+}
+
+.rarity-badge.legendary {
+  background: hsl(var(--rarity-legendary) / 0.2);
+  color: hsl(var(--rarity-legendary));
+}
+
+.rarity-badge.mythic {
+  background: hsl(var(--rarity-mythic) / 0.2);
+  color: hsl(var(--rarity-mythic));
+}
+
+/* Effet de scan ligne (Matrix style) */
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: hsl(var(--primary));
+  animation: scan 3s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes scan {
+  0% {
+    top: -10%;
+  }
+  100% {
+    top: 110%;
+  }
+}
+
+/* Haptic feedback visual */
+.haptic-feedback {
+  animation: haptic 0.1s ease-out;
+}
+
+@keyframes haptic {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+}
