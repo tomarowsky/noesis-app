@@ -37,6 +37,8 @@ interface ProgressState extends UserProgress {
   lastUnlockedAchievementId: string | null;
   clearLastUnlockedAchievement: () => void;
   updateStats: (updates: Partial<UserStats>) => void;
+  /** Re-vérifie les succès (data_viewed, time, etc.) et accorde l'XP si un succès se débloque */
+  recheckAchievements: () => void;
   updateCustomizations: (updates: Partial<Customizations>) => void;
   /** Rétablit thème, couleur, police, layout et effets aux valeurs par défaut. */
   resetCustomizations: () => void;
@@ -292,6 +294,16 @@ const calculateXpToNextLevel = (level: number): number => {
   return Math.floor(100 * Math.pow(1.5, level - 1));
 };
 
+/** Récompense XP à chaque succès débloqué — ultra rewardant, selon rareté */
+const ACHIEVEMENT_XP_BY_RARITY: Record<string, number> = {
+  common: 35,
+  uncommon: 60,
+  rare: 120,
+  epic: 220,
+  legendary: 400,
+  mythic: 750,
+};
+
 export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
@@ -505,6 +517,15 @@ export const useProgressStore = create<ProgressState>()(
             lastUnlockedAchievementId,
           };
         });
+        // Récompense XP à chaque succès débloqué (y compris si débloqué lors d'un addXp 'achievement', ex. Accomplisseur)
+        const state = get();
+        if (state.lastUnlockedAchievementId) {
+          const ach = state.achievements.find(a => a.id === state.lastUnlockedAchievementId);
+          if (ach?.unlockedAt) {
+            const xpReward = ACHIEVEMENT_XP_BY_RARITY[ach.rarity] ?? 50;
+            get().addXp(xpReward, 'achievement');
+          }
+        }
       },
 
       checkLevelUp: () => {
@@ -513,13 +534,17 @@ export const useProgressStore = create<ProgressState>()(
       },
 
       unlockAchievement: (achievementId: string) => {
-        set((state) => ({
-          achievements: state.achievements.map(ach =>
-            ach.id === achievementId && !ach.unlockedAt
-              ? { ...ach, unlockedAt: new Date().toISOString() }
-              : ach
-          )
+        const state = get();
+        const ach = state.achievements.find(a => a.id === achievementId);
+        if (!ach || ach.unlockedAt) return;
+        set((s) => ({
+          achievements: s.achievements.map(a =>
+            a.id === achievementId ? { ...a, unlockedAt: new Date().toISOString() } : a
+          ),
+          lastUnlockedAchievementId: achievementId,
         }));
+        const xpReward = ACHIEVEMENT_XP_BY_RARITY[ach.rarity] ?? 50;
+        get().addXp(xpReward, 'achievement');
       },
 
       unlockFeature: (featureId: string) => {
@@ -561,6 +586,64 @@ export const useProgressStore = create<ProgressState>()(
         set((state) => ({
           stats: { ...state.stats, ...updates }
         }));
+        get().recheckAchievements();
+      },
+
+      recheckAchievements: () => {
+        const state = get();
+        if (!state?.achievements || !Array.isArray(state.achievements) || !state.stats) return;
+        const updatedAchievements = state.achievements.map(ach => {
+          if (ach.unlockedAt) return ach;
+          let shouldUnlock = false;
+          switch (ach.condition.type) {
+            case 'level':
+              shouldUnlock = state.level >= ach.condition.value;
+              break;
+            case 'xp':
+              shouldUnlock = state.totalXp >= ach.condition.value;
+              break;
+            case 'secrets':
+              shouldUnlock = state.discoveredSecrets.length >= ach.condition.value;
+              break;
+            case 'data_viewed':
+              shouldUnlock = state.stats.dataPointsViewed >= ach.condition.value;
+              break;
+            case 'time':
+              shouldUnlock = state.stats.timeSpent >= ach.condition.value;
+              break;
+            case 'quiz_correct':
+              shouldUnlock = state.stats.quizCorrect >= ach.condition.value;
+              break;
+            case 'streak':
+              shouldUnlock = state.stats.streakDaysQuiz >= ach.condition.value;
+              break;
+            case 'quiz_streak':
+              shouldUnlock = state.stats.bestQuizStreak >= ach.condition.value;
+              break;
+            case 'quiz_series':
+              shouldUnlock = state.stats.quizSeriesCompleted >= ach.condition.value;
+              break;
+            case 'category_correct': {
+              const cat = (ach.condition as { category?: string }).category;
+              shouldUnlock = cat != null && (state.stats.categoryCorrect[cat] ?? 0) >= ach.condition.value;
+              break;
+            }
+            default:
+              break;
+          }
+          if (shouldUnlock) return { ...ach, unlockedAt: new Date().toISOString() };
+          return ach;
+        });
+        const firstNewlyUnlocked = updatedAchievements.find(
+          (ach, i) => !state.achievements[i]?.unlockedAt && ach.unlockedAt
+        );
+        if (!firstNewlyUnlocked) return;
+        set({
+          achievements: updatedAchievements,
+          lastUnlockedAchievementId: firstNewlyUnlocked.id,
+        });
+        const xpReward = ACHIEVEMENT_XP_BY_RARITY[firstNewlyUnlocked.rarity] ?? 50;
+        get().addXp(xpReward, 'achievement');
       },
 
       updateCustomizations: (updates: Partial<Customizations>) => {

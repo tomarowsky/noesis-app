@@ -110,6 +110,7 @@ export function AchievementsPanel({ isOpen, onClose }: AchievementsPanelProps) {
             style={{ width: `${progress}%` }}
           />
         </div>
+        <p className="text-[11px] text-muted-foreground mt-2">Chaque succès débloqué = bonus XP (Commun 35 → Mythique 750).</p>
       </div>
       
       {/* Filters */}

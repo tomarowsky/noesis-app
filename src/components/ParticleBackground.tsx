@@ -53,8 +53,8 @@ export function ParticleBackground() {
     
     const getAccentColor = () => {
       const style = getComputedStyle(document.documentElement);
-      const primary = style.getPropertyValue('--primary').trim();
-      return primary ? `hsl(${primary})` : 'hsl(220, 90%, 56%)';
+      const accent = style.getPropertyValue('--accent').trim();
+      return accent ? `hsl(${accent})` : 'hsl(220, 90%, 56%)';
     };
     
     const animate = () => {

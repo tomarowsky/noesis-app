@@ -2134,7 +2134,7 @@ function AchievementsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           <X className="w-6 h-6 text-white" />
         </button>
       </div>
-      <p className="text-[11px] text-gray-500 mb-4">Chaque succès récompense un défi relevé : quiz, niveau, secrets, exploration.</p>
+      <p className="text-[11px] text-gray-500 mb-4">Chaque succès débloqué vous récompense en XP (Commun 35 → Mythique 750 XP). Quiz, niveau, secrets, exploration.</p>
       <div className="space-y-3">
         {achievements.map(ach => {
           const Icon = ACHIEVEMENT_ICONS[ach.icon] || Star;
@@ -2766,6 +2766,7 @@ function ProgressionBlock({
   xpNeeded,
   nextLevel,
   nextLevelUnlocks,
+  nextLevelFeatureNames,
   stats,
   exploredCategoriesCount,
   completedChallenges,
@@ -2777,6 +2778,7 @@ function ProgressionBlock({
   xpNeeded: number;
   nextLevel: number;
   nextLevelUnlocks: string[];
+  nextLevelFeatureNames: string[];
   stats: { dataPointsViewed: number; timeSpent: number; quizCorrect?: number; quizAnswered?: number };
   exploredCategoriesCount: number;
   completedChallenges: Set<string>;
@@ -2884,17 +2886,25 @@ function ProgressionBlock({
             <li className="flex items-center gap-2">Quiz : 3 bonnes d&apos;affilée : <span className="text-amber-400">+10 XP</span> bonus</li>
             <li className="flex items-center gap-2">Quiz : série de 5 questions : <span className="text-amber-400">+25 XP</span> bonus</li>
             <li className="flex items-center gap-2">Défis (série, 10 réponses, etc.) : <span className="text-emerald-400">+25 à +50 XP</span></li>
+            <li className="flex items-center gap-2">Succès débloqués : <span className="text-yellow-400">+35 à +750 XP</span> (selon rareté)</li>
           </ul>
         )}
       </div>
 
-      {nextLevelUnlocks.length > 0 && (
+      {(nextLevelUnlocks.length > 0 || nextLevelFeatureNames.length > 0) && (
         <div className="pt-3 mt-3 border-t border-white/5">
           <p className="text-[10px] text-gray-500 mb-1">Au niveau {nextLevel} vous débloquerez :</p>
-          <p className="text-[11px] text-gray-400">
-            {nextLevelUnlocks.slice(0, 5).join(', ')}
-            {nextLevelUnlocks.length > 5 && ` +${nextLevelUnlocks.length - 5} autres`}
-          </p>
+          {nextLevelUnlocks.length > 0 && (
+            <p className="text-[11px] text-gray-400">
+              Données : {nextLevelUnlocks.slice(0, 5).join(', ')}
+              {nextLevelUnlocks.length > 5 && ` +${nextLevelUnlocks.length - 5} autres`}
+            </p>
+          )}
+          {nextLevelFeatureNames.length > 0 && (
+            <p className="text-[11px] text-emerald-400/90 mt-0.5">
+              Fonctionnalités : {nextLevelFeatureNames.join(', ')}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -2914,7 +2924,8 @@ export default function App() {
     if (customizations.theme && customizations.theme !== 'dark') {
       document.body.classList.add(`theme-${customizations.theme}`);
     }
-    const hsl = hexToHsl(customizations.accentColor);
+    const accentHex = (customizations.accentColor ?? '').trim() || '#3b82f6';
+    const hsl = hexToHsl(/^#?[a-f\d]{6}$/i.test(accentHex) ? accentHex : '#3b82f6');
     document.documentElement.style.setProperty('--primary', hsl);
     document.documentElement.style.setProperty('--accent', hsl);
     document.documentElement.style.setProperty('--ring', hsl);
@@ -3115,11 +3126,17 @@ export default function App() {
 
   const getLockedWidgets = () => (effectiveLifetime ? [] : WIDGETS.filter(w => w.levelRequired > effectiveLevel).slice(0, 4));
   const nextLevelUnlocks = getWidgetsUnlockingAtLevel(effectiveLevel + 1);
+  const nextLevelFeatureNames = (unlockedFeatures ?? [])
+    .filter(f => f.levelRequired === effectiveLevel + 1 && !f.hidden)
+    .map(f => f.name);
   const xpToNextLevelFor = (l: number) => Math.floor(100 * Math.pow(1.5, l - 1));
   const displayXp = devLevelOverride != null ? 0 : (devLifetimeOverride ? 0 : xp);
   const displayXpToNextLevel = devLevelOverride != null ? xpToNextLevelFor(effectiveLevel) : (devLifetimeOverride ? 1 : xpToNextLevel);
   const displayProgress = (devLevelOverride != null || devLifetimeOverride) ? 0 : progress;
-  const xpNeeded = xpToNextLevel - xp;
+  // En mode dev (prévisualisation niveau) : xpNeeded = XP minimum à faire dans ce niveau pour débloquer le suivant (barre à 0)
+  const xpNeeded = (devLevelOverride != null || devLifetimeOverride)
+    ? (displayXpToNextLevel - displayXp)
+    : (xpToNextLevel - xp);
   
   const layout = customizations.layout;
   const cardMinHeight = layout === 'compact' ? '100px' : layout === 'expanded' ? '180px' : '140px';
@@ -3377,6 +3394,7 @@ export default function App() {
                 xpNeeded={xpNeeded}
                 nextLevel={effectiveLevel + 1}
                 nextLevelUnlocks={nextLevelUnlocks}
+                nextLevelFeatureNames={nextLevelFeatureNames}
                 stats={stats}
                 exploredCategoriesCount={exploredCategories.size}
                 completedChallenges={completedChallenges}

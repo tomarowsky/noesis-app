@@ -210,7 +210,8 @@ export function CustomizationPanel({ isOpen, onClose }: CustomizationPanelProps)
             <div className="grid grid-cols-2 gap-3">
               {ACCENT_COLORS.map(color => {
                 const isUnlocked = level >= color.level;
-                const isActive = customizations.accentColor === color.value;
+                const currentAccent = (customizations.accentColor ?? '').trim().toLowerCase();
+                const isActive = currentAccent === color.value.trim().toLowerCase();
                 
                 return (
                   <button
