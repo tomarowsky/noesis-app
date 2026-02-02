@@ -27,6 +27,9 @@ const SECRET_CODES: Record<string, string[]> = {
   'secret_42': ['4', '2']
 };
 
+// Les 3 secrets « aperçu » : débloquent des thèmes dans Personnalisation (Matrix, Rétro, Or)
+const THEME_PREVIEW_SECRET_IDS = ['secret_matrix', 'secret_retro', 'secret_gold_rush'];
+
 // Codes texte (iPhone / clavier virtuel) — taper dans le champ ci-dessous
 const TEXT_CODES: Record<string, string> = {
   'retro': 'secret_retro',
@@ -73,9 +76,20 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
   const discoveredSecrets = Array.isArray(discoveredSecretsRaw) ? discoveredSecretsRaw : [];
   const hiddenUnlocks = (() => {
     const features = Array.isArray(unlockedFeaturesRaw) ? unlockedFeaturesRaw : [];
-    return features.filter(f =>
+    const filtered = features.filter(f =>
       f != null && typeof f === 'object' && Boolean((f as { hidden?: boolean }).hidden) && !(f as { unlockedAt?: string }).unlockedAt
     );
+    // Afficher les 3 secrets « aperçu » (thèmes) en premier pour expliquer à quoi ça sert
+    return [...filtered].sort((a, b) => {
+      const aId = (a as { id?: string }).id ?? '';
+      const bId = (b as { id?: string }).id ?? '';
+      const aPreview = THEME_PREVIEW_SECRET_IDS.indexOf(aId);
+      const bPreview = THEME_PREVIEW_SECRET_IDS.indexOf(bId);
+      if (aPreview !== -1 && bPreview !== -1) return aPreview - bPreview;
+      if (aPreview !== -1) return -1;
+      if (bPreview !== -1) return 1;
+      return 0;
+    });
   })();
 
   useEffect(() => {
@@ -258,11 +272,14 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
             <li><strong className="text-gray-400">Nombres célèbres</strong> — 42, 314… et d'autres chiffres de la culture geek.</li>
           </ul>
           <p className="text-[11px] text-purple-300/90 mt-2 italic">
-            Tape le code dans le champ ci-dessous (minuscules, sans espaces). <strong>Dès que tu trouves le bon code, le secret se débloque</strong> — pas de niveau requis. Les cartes &quot;Secrets Cachés&quot; plus bas affichent un indice.
+            Tape le code dans le champ ci-dessous (minuscules, sans espaces). <strong>Dès que tu trouves le bon code, le secret se débloque</strong>. Les cartes &quot;Secrets Cachés&quot; plus bas affichent un indice.
+          </p>
+          <p className="text-[11px] text-amber-300/90 mt-1">
+            <strong>Aperçu :</strong> les codes <strong>matrix</strong>, <strong>retro</strong> et <strong>gold</strong> débloquent des thèmes (Personnalisation → Thème). Les autres récompensent ta curiosité (XP, succès).
           </p>
         </div>
 
-        {/* Champ de saisie */}
+        {/* Champ de saisie — placeholder = 3 secrets par défaut (aperçu thèmes) */}
         <div className="space-y-2">
           <label htmlFor="secret-code" className="text-sm font-medium text-gray-400">
             Entrer un code
@@ -276,7 +293,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="ex. retro, gold, 42…"
+              placeholder="ex. matrix, retro, gold (aperçu thèmes)…"
               value={codeInput}
               onChange={(e) => {
                 setCodeInput(e.target.value);
@@ -301,6 +318,9 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
           {codeError && (
             <p className="text-xs text-red-400">{codeError}</p>
           )}
+          <p className="text-[10px] text-gray-500">
+            Matrix, Rétro, Or → thèmes dans Personnalisation. Les autres → XP + succès.
+          </p>
         </div>
         
         {/* Séquence de touches (debug) */}
@@ -340,12 +360,13 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
           </div>
         )}
         
-        {/* Secrets à découvrir */}
+        {/* Secrets à découvrir — triés : 3 aperçus (thèmes) en premier, puis les autres */}
         <div>
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
             <Lock className="w-4 h-4 text-gray-500" />
             Secrets Cachés
           </h3>
+          <p className="text-[10px] text-gray-500 mb-3">Les 3 premiers débloquent des thèmes ; les autres donnent XP et comptent pour les succès.</p>
           <div className="space-y-2">
             {hiddenUnlocks.map((secret, idx) => (
               <div 

@@ -2761,7 +2761,7 @@ function getProgressionTips(
   return tips.sort((a, b) => b.priority - a.priority);
 }
 
-// Bloc "Comment progresser" — conseils dynamiques, jamais bloquant
+// Bloc "Comment progresser" — conseils dynamiques, jamais bloquant ; croix discard comme le reste du dashboard
 function ProgressionBlock({
   xpNeeded,
   nextLevel,
@@ -2772,6 +2772,7 @@ function ProgressionBlock({
   onGoToExplorer,
   onShowChallenges,
   onShowQuiz,
+  onDismiss,
 }: {
   xpNeeded: number;
   nextLevel: number;
@@ -2782,6 +2783,7 @@ function ProgressionBlock({
   onGoToExplorer: () => void;
   onShowChallenges: () => void;
   onShowQuiz: () => void;
+  onDismiss?: () => void;
 }) {
   const [showAllWays, setShowAllWays] = useState(false);
   const tips = getProgressionTips(xpNeeded, stats.dataPointsViewed, exploredCategoriesCount, completedChallenges);
@@ -2789,7 +2791,18 @@ function ProgressionBlock({
   const otherTips = tips.slice(1, 4);
 
   return (
-    <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-white/10">
+    <div className="relative mb-6 p-4 pr-10 rounded-xl bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-white/10">
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="absolute right-2 top-2 p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-colors"
+          aria-label="Masquer"
+          title="Masquer (réapparaît quand vous quittez le dashboard)"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
       <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-2">
         <Target className="w-4 h-4 text-blue-400" />
         Comment progresser
@@ -2968,6 +2981,7 @@ export default function App() {
   const [proReminderDismissed, setProReminderDismissed] = useState(() => typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('noesis_pro_reminder_dismissed'));
   /** Masqué par l'utilisateur pour nettoyer le dashboard ; réapparaît quand il quitte et revient (mode gratuit). */
   const [dashboardDiscardedPro, setDashboardDiscardedPro] = useState(false);
+  const [dashboardDiscardedProgression, setDashboardDiscardedProgression] = useState(false);
   const prevLevelRef = useRef(0);
   const logoTapCountRef = useRef(0);
   const logoTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -3055,11 +3069,12 @@ export default function App() {
     return () => clearTimeout(t);
   }, [lastUnlockedAchievementId, clearLastUnlockedAchievement]);
 
-  // En quittant le dashboard : désactiver réorganisation et réafficher CTA Pro + rappel Pro au prochain retour (gratuit)
+  // En quittant le dashboard : désactiver réorganisation et réafficher CTA Pro + bloc progression + rappel Pro au prochain retour (gratuit)
   useEffect(() => {
     if (currentView !== 'dashboard') {
       setDashboardEditMode(false);
       setDashboardDiscardedPro(false);
+      setDashboardDiscardedProgression(false);
       setProReminderDismissed(false);
       if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('noesis_pro_reminder_dismissed');
     }
@@ -3100,6 +3115,10 @@ export default function App() {
 
   const getLockedWidgets = () => (effectiveLifetime ? [] : WIDGETS.filter(w => w.levelRequired > effectiveLevel).slice(0, 4));
   const nextLevelUnlocks = getWidgetsUnlockingAtLevel(effectiveLevel + 1);
+  const xpToNextLevelFor = (l: number) => Math.floor(100 * Math.pow(1.5, l - 1));
+  const displayXp = devLevelOverride != null ? 0 : (devLifetimeOverride ? 0 : xp);
+  const displayXpToNextLevel = devLevelOverride != null ? xpToNextLevelFor(effectiveLevel) : (devLifetimeOverride ? 1 : xpToNextLevel);
+  const displayProgress = (devLevelOverride != null || devLifetimeOverride) ? 0 : progress;
   const xpNeeded = xpToNextLevel - xp;
   
   const layout = customizations.layout;
@@ -3237,16 +3256,16 @@ export default function App() {
             </div>
           </div>
           
-          {/* XP Bar */}
+          {/* XP Bar — en mode dev (niveau prévisualisé), XP affiché = 0 pour ce niveau */}
           <div>
             <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-              <span>{xp} XP</span>
-              <span>{xpToNextLevel} XP</span>
+              <span>{displayXp} XP</span>
+              <span>{displayXpToNextLevel} XP</span>
             </div>
             <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden">
               <div 
                 className="h-full rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-700"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${displayProgress}%` }}
               />
             </div>
           </div>
@@ -3352,18 +3371,21 @@ export default function App() {
               </div>
             )}
 
-            {/* Comment progresser — conseils orientés quiz + exploration */}
-            <ProgressionBlock
-              xpNeeded={xpNeeded}
-              nextLevel={effectiveLevel + 1}
-              nextLevelUnlocks={nextLevelUnlocks}
-              stats={stats}
-              exploredCategoriesCount={exploredCategories.size}
-              completedChallenges={completedChallenges}
-              onGoToExplorer={() => setCurrentView('explorer')}
-              onShowChallenges={() => setShowChallenges(true)}
-              onShowQuiz={() => setShowQuiz(true)}
-            />
+            {/* Comment progresser — conseils orientés quiz + exploration ; croix discard comme le reste */}
+            {!dashboardDiscardedProgression && (
+              <ProgressionBlock
+                xpNeeded={xpNeeded}
+                nextLevel={effectiveLevel + 1}
+                nextLevelUnlocks={nextLevelUnlocks}
+                stats={stats}
+                exploredCategoriesCount={exploredCategories.size}
+                completedChallenges={completedChallenges}
+                onGoToExplorer={() => setCurrentView('explorer')}
+                onShowChallenges={() => setShowChallenges(true)}
+                onShowQuiz={() => setShowQuiz(true)}
+                onDismiss={() => setDashboardDiscardedProgression(true)}
+              />
+            )}
             
             <div className={cn('grid grid-cols-3 mb-6', dashboardGap)}>
               <div className="bg-[#0a0a0a] rounded-xl p-3 text-center border border-white/5">
@@ -4070,6 +4092,16 @@ export default function App() {
           <p className="text-[10px] text-gray-500 mb-2">
             Prévisualiser l’UI : niveau et abonnement (gratuit / premium / lifetime). Réversible.
           </p>
+          {/* État réel (sauvegardé) — toujours visible pour revenir à la progression réelle */}
+          <div className="mb-3 p-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10">
+            <p className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-1.5">État réel (sauvegardé)</p>
+            <p className="text-sm text-emerald-200/90">
+              Niveau <strong>{level}</strong> · <strong>{xp}</strong> / {xpToNextLevel} XP
+            </p>
+            <p className="text-[10px] text-emerald-300/70 mt-1">
+              {(devLevelOverride != null || devLifetimeOverride) ? 'Prévisualisation active — utilisez le bouton ci-dessous pour revenir.' : 'Aucune prévisualisation.'}
+            </p>
+          </div>
           <div className="flex items-center gap-2 mb-3">
             <label htmlFor="dev-level" className="text-xs text-gray-400 shrink-0 w-20">Niveau :</label>
             <select
@@ -4123,18 +4155,18 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => { setDevLevelOverride(null); setDevLifetimeOverride(false); setDevPremiumOverride(null); }}
-              className="flex-1 py-2 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20"
+              className="w-full py-2.5 rounded-lg text-sm font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30"
             >
-              Réel (niveau {level})
+              Revenir à mon état réel — Niveau {level} · {xp}/{xpToNextLevel} XP
             </button>
             <button
               type="button"
               onClick={() => setShowDevPanel(false)}
-              className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
+              className="py-2 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
             >
               Fermer
             </button>

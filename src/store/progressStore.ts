@@ -547,8 +547,10 @@ export const useProgressStore = create<ProgressState>()(
           lastDiscoveredSecretId: secretId,
           stats: { ...state.stats, secretsFound: newSecrets.length }
         });
-        // Bonus XP en dehors du set() pour éviter boucle / mises à jour en cascade
-        get().addXp(50, 'secret_discovery');
+        // Bonus XP relatif : fraction de l'XP requis pour le niveau actuel (avancement significatif quel que soit le niveau)
+        const xpForLevel = state.xpToNextLevel;
+        const secretXpReward = Math.max(20, Math.floor(xpForLevel * 0.35));
+        get().addXp(secretXpReward, 'secret_discovery');
       },
 
       clearLastDiscoveredSecret: () => set({ lastDiscoveredSecretId: null }),
