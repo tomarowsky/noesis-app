@@ -67,7 +67,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
   const [codeError, setCodeError] = useState<string | null>(null);
   const openedAtRef = useRef<number>(0);
   const [blockClicksUntil, setBlockClicksUntil] = useState(0);
-  const { discoverSecret, level } = useProgressStore();
+  const { discoverSecret } = useProgressStore();
   const discoveredSecretsRaw = useProgressStore(state => state.discoveredSecrets);
   const unlockedFeaturesRaw = useProgressStore(state => state.unlockedFeatures);
   const discoveredSecrets = Array.isArray(discoveredSecretsRaw) ? discoveredSecretsRaw : [];
@@ -100,11 +100,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       setCodeError('Déjà débloqué');
       return;
     }
-    const secretUnlock = hiddenUnlocks.find(u => u.id === secretId);
-    if (!secretUnlock || level < secretUnlock.levelRequired) {
-      setCodeError(`Niveau ${secretUnlock?.levelRequired ?? '?'} requis`);
-      return;
-    }
+    // Trouver le code = débloquer le secret, quel que soit le niveau (la découverte brise la chaîne XP)
     discoverSecret(secretId);
     setDiscoveredCode(secretId);
     setCodeInput('');
@@ -127,13 +123,9 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
           const sequenceStr = newSequence.join('');
           
           if (sequenceStr.endsWith(codeStr) && !discoveredSecrets.includes(secretId)) {
-            // Vérifier le niveau requis
-            const secretUnlock = hiddenUnlocks.find(u => u.id === secretId);
-            if (secretUnlock && level >= secretUnlock.levelRequired) {
-              discoverSecret(secretId);
-              setDiscoveredCode(secretId);
-              setTimeout(() => setDiscoveredCode(null), 3000);
-            }
+            discoverSecret(secretId);
+            setDiscoveredCode(secretId);
+            setTimeout(() => setDiscoveredCode(null), 3000);
           }
         });
         
@@ -143,7 +135,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, discoveredSecrets, hiddenUnlocks, level, discoverSecret]);
+  }, [isOpen, discoveredSecrets, discoverSecret]);
   
   const getSecretIcon = (secretId: string) => {
     switch (secretId) {
@@ -266,7 +258,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
             <li><strong className="text-gray-400">Nombres célèbres</strong> — 42, 314… et d'autres chiffres de la culture geek.</li>
           </ul>
           <p className="text-[11px] text-purple-300/90 mt-2 italic">
-            Tape le code dans le champ ci-dessous (minuscules, sans espaces). Chaque secret a un <strong>niveau minimum</strong> pour être débloqué. Les cartes &quot;Secrets Cachés&quot; plus bas affichent un indice — le code à taper en découle souvent.
+            Tape le code dans le champ ci-dessous (minuscules, sans espaces). <strong>Dès que tu trouves le bon code, le secret se débloque</strong> — pas de niveau requis. Les cartes &quot;Secrets Cachés&quot; plus bas affichent un indice.
           </p>
         </div>
 
@@ -370,12 +362,8 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
                       &quot;{secret.hint}&quot;
                     </p>
                   )}
+                  <p className="text-[10px] text-gray-600 mt-1">Trouve le code → débloqué</p>
                 </div>
-                {secret?.levelRequired != null && level < secret.levelRequired && (
-                  <span className="text-xs text-gray-500">
-                    Niv. {secret.levelRequired}
-                  </span>
-                )}
               </div>
             ))}
           </div>
