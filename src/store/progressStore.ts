@@ -581,7 +581,8 @@ export const useProgressStore = create<ProgressState>()(
 
       getHiddenUnlocks: () => {
         const state = get();
-        return state.unlockedFeatures.filter(f => 
+        const features = state.unlockedFeatures ?? [];
+        return features.filter(f =>
           f.hidden && !f.unlockedAt
         );
       },

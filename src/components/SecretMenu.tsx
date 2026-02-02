@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useProgressStore } from '@/store/progressStore';
 import { 
   X, 
@@ -155,18 +156,31 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
     return names[secretId] || secretId;
   };
   
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  if (!containerRef.current && typeof document !== 'undefined') {
+    containerRef.current = document.createElement('div');
+    containerRef.current.id = 'secret-menu-portal';
+    document.body.appendChild(containerRef.current);
+  }
+
   if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-[#050505] backdrop-blur-xl safe-area-top safe-area-bottom flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0a0a0a]">
+
+  const modal = (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="secret-menu-title"
+      className="fixed inset-0 z-[200] flex flex-col bg-[#0c0c0c] safe-area-top safe-area-bottom"
+      style={{ minHeight: '100vh' }}
+    >
+      {/* Header — toujours visible */}
+      <div className="flex shrink-0 items-center justify-between p-4 border-b border-white/10 bg-[#111111]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
             <Eye className="w-5 h-5 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Secrets & Mystères</h2>
+            <h2 id="secret-menu-title" className="text-lg font-semibold text-white">Secrets & Mystères</h2>
             <p className="text-xs text-gray-500">
               {discoveredSecrets.length} / {hiddenUnlocks.length + discoveredSecrets.length} découverts
             </p>
@@ -182,7 +196,10 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       </div>
       
       {/* Content — scroll fluide iOS */}
-      <div className="p-4 space-y-4 overflow-y-auto main-scroll safe-area-bottom flex-1 min-h-0 bg-[#050505]" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4 main-scroll safe-area-bottom bg-[#0c0c0c]"
+        style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}
+      >
         {/* Instructions */}
         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
           <p className="text-sm text-gray-400 mb-2">
@@ -329,4 +346,6 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       )}
     </div>
   );
+
+  return containerRef.current ? createPortal(modal, containerRef.current) : modal;
 }
