@@ -10,9 +10,10 @@ import {
   Zap,
   Grid,
   List,
-  Maximize2
+  Maximize2,
+  RotateCcw
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, hexToHsl } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 
 interface CustomizationPanelProps {
@@ -56,6 +57,7 @@ export function CustomizationPanel({ isOpen, onClose }: CustomizationPanelProps)
   const { 
     customizations, 
     updateCustomizations, 
+    resetCustomizations, 
     level, 
     discoveredSecrets 
   } = useProgressStore();
@@ -72,9 +74,10 @@ export function CustomizationPanel({ isOpen, onClose }: CustomizationPanelProps)
   const handleColorChange = (color: typeof ACCENT_COLORS[0]) => {
     if (!isFeatureUnlocked(color.id, color.level)) return;
     updateCustomizations({ accentColor: color.value });
-    document.documentElement.style.setProperty('--primary', color.value);
-    document.documentElement.style.setProperty('--accent', color.value);
-    document.documentElement.style.setProperty('--ring', color.value);
+    const hsl = hexToHsl(color.value);
+    document.documentElement.style.setProperty('--primary', hsl);
+    document.documentElement.style.setProperty('--accent', hsl);
+    document.documentElement.style.setProperty('--ring', hsl);
   };
   
   const handleThemeChange = (theme: typeof THEMES[0]) => {
@@ -365,6 +368,22 @@ export function CustomizationPanel({ isOpen, onClose }: CustomizationPanelProps)
               onCheckedChange={(checked) => updateCustomizations({ animations: checked })}
             />
           </div>
+        </div>
+
+        {/* Rétablir les paramètres par défaut */}
+        <div className="mt-6 pt-6 border-t border-border/50">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Rétablir thème, couleur, police, layout et effets par défaut ?')) {
+                resetCustomizations();
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Rétablir les paramètres par défaut
+          </button>
         </div>
       </div>
     </div>

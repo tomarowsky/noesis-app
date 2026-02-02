@@ -18,7 +18,7 @@ interface SecretMenuProps {
   onClose: () => void;
 }
 
-// Codes secrets et leurs déclencheurs
+// Codes clavier (desktop) — séquences de touches
 const SECRET_CODES: Record<string, string[]> = {
   'secret_matrix': ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'],
   'secret_retro': ['r', 'e', 't', 'r', 'o'],
@@ -27,13 +27,64 @@ const SECRET_CODES: Record<string, string[]> = {
   'secret_42': ['4', '2']
 };
 
+// Codes texte (iPhone / clavier virtuel) — taper dans le champ ci-dessous
+const TEXT_CODES: Record<string, string> = {
+  'retro': 'secret_retro',
+  'gold': 'secret_gold_rush',
+  'quantum': 'secret_quantum',
+  '42': 'secret_42',
+  'matrix': 'secret_matrix',
+  'konami': 'secret_matrix',
+  'illuminati': 'secret_illuminati',
+  'oeil': 'secret_illuminati',
+  'delorean': 'secret_time_travel',
+  'bttf': 'secret_time_travel',
+  'gigawatts': 'secret_time_travel',
+  '121': 'secret_time_travel',
+  'voyage': 'secret_time_travel',
+  'triforce': 'secret_triforce',
+  'zelda': 'secret_triforce',
+  'pi': 'secret_pi',
+  '314': 'secret_pi',
+  'omega': 'secret_omega',
+  'iddqd': 'secret_iddqd',
+  'lune': 'secret_moon',
+  'moon': 'secret_moon',
+};
+
 export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const [showSequence, setShowSequence] = useState(false);
   const [discoveredCode, setDiscoveredCode] = useState<string | null>(null);
-  const { discoveredSecrets, unlockFeature, addXp, level } = useProgressStore();
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const { discoveredSecrets, discoverSecret, level } = useProgressStore();
   
   const hiddenUnlocks = useProgressStore(state => state.getHiddenUnlocks());
+
+  const tryUnlockByCode = (raw: string) => {
+    const normalized = raw.trim().toLowerCase();
+    if (!normalized) return;
+    const secretId = TEXT_CODES[normalized];
+    if (!secretId) {
+      setCodeError('Code inconnu');
+      return;
+    }
+    if (discoveredSecrets.includes(secretId)) {
+      setCodeError('Déjà débloqué');
+      return;
+    }
+    const secretUnlock = hiddenUnlocks.find(u => u.id === secretId);
+    if (!secretUnlock || level < secretUnlock.levelRequired) {
+      setCodeError(`Niveau ${secretUnlock?.levelRequired ?? '?'} requis`);
+      return;
+    }
+    discoverSecret(secretId);
+    setDiscoveredCode(secretId);
+    setCodeInput('');
+    setCodeError(null);
+    setTimeout(() => setDiscoveredCode(null), 3000);
+  };
   
   // Écouter les touches pour les codes secrets
   useEffect(() => {
@@ -53,10 +104,8 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
             // Vérifier le niveau requis
             const secretUnlock = hiddenUnlocks.find(u => u.id === secretId);
             if (secretUnlock && level >= secretUnlock.levelRequired) {
-              unlockFeature(secretId);
+              discoverSecret(secretId);
               setDiscoveredCode(secretId);
-              addXp(100, 'secret_code');
-              
               setTimeout(() => setDiscoveredCode(null), 3000);
             }
           }
@@ -68,7 +117,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, discoveredSecrets, hiddenUnlocks, level, unlockFeature, addXp]);
+  }, [isOpen, discoveredSecrets, hiddenUnlocks, level, discoverSecret]);
   
   const getSecretIcon = (secretId: string) => {
     switch (secretId) {
@@ -77,6 +126,13 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       case 'secret_gold_rush': return <Sparkles className="w-5 h-5" />;
       case 'secret_quantum': return <Zap className="w-5 h-5" />;
       case 'secret_42': return <Key className="w-5 h-5" />;
+      case 'secret_illuminati': return <Eye className="w-5 h-5" />;
+      case 'secret_time_travel': return <Zap className="w-5 h-5" />;
+      case 'secret_triforce': return <Sparkles className="w-5 h-5" />;
+      case 'secret_pi': return <Key className="w-5 h-5" />;
+      case 'secret_omega': return <Key className="w-5 h-5" />;
+      case 'secret_iddqd': return <Zap className="w-5 h-5" />;
+      case 'secret_moon': return <Sparkles className="w-5 h-5" />;
       default: return <Key className="w-5 h-5" />;
     }
   };
@@ -89,7 +145,12 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       'secret_quantum': 'Données Quantiques',
       'secret_illuminati': 'Illuminati',
       'secret_time_travel': 'Voyage Temporel',
-      'secret_42': 'La Réponse'
+      'secret_42': 'La Réponse',
+      'secret_triforce': 'Triforce',
+      'secret_pi': 'Pi',
+      'secret_omega': 'Oméga',
+      'secret_iddqd': 'Mode Dieu (IDDQD)',
+      'secret_moon': 'Lune',
     };
     return names[secretId] || secretId;
   };
@@ -97,43 +158,85 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
   if (!isOpen) return null;
   
   return (
-    <div className="hidden-menu safe-area-top safe-area-bottom">
+    <div className="fixed inset-0 z-50 bg-[#050505] backdrop-blur-xl safe-area-top safe-area-bottom flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/50">
+      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0a0a0a]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <Eye className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+            <Eye className="w-5 h-5 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Secrets & Mystères</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-lg font-semibold text-white">Secrets & Mystères</h2>
+            <p className="text-xs text-gray-500">
               {discoveredSecrets.length} / {hiddenUnlocks.length + discoveredSecrets.length} découverts
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+          aria-label="Fermer"
         >
           <X className="w-6 h-6" />
         </button>
       </div>
       
-      {/* Content */}
-      <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+      {/* Content — scroll fluide iOS */}
+      <div className="p-4 space-y-4 overflow-y-auto main-scroll safe-area-bottom flex-1 min-h-0 bg-[#050505]" style={{ maxHeight: 'calc(100vh - 180px)' }}>
         {/* Instructions */}
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-          <p className="text-sm text-muted-foreground mb-2">
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+          <p className="text-sm text-gray-400 mb-2">
             Des secrets sont cachés dans l'app. Trouvez les codes pour débloquer des fonctionnalités exclusives.
           </p>
-          <p className="text-xs text-primary">
-            Indice: Certains codes sont célèbres, d'autres nécessitent de l'exploration...
+          <p className="text-xs text-purple-300">
+            Sur iPhone : entrez le code ci-dessous (le clavier s'affiche). Sur ordinateur : vous pouvez aussi taper au clavier.
           </p>
+        </div>
+
+        {/* Champ de saisie — iOS : clavier virtuel ; desktop : optionnel */}
+        <div className="space-y-2">
+          <label htmlFor="secret-code" className="text-sm font-medium text-gray-400">
+            Entrer un code
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="secret-code"
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="ex. retro, gold, 42…"
+              value={codeInput}
+              onChange={(e) => {
+                setCodeInput(e.target.value);
+                setCodeError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  tryUnlockByCode(codeInput);
+                }
+              }}
+              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
+            <button
+              type="button"
+              onClick={() => tryUnlockByCode(codeInput)}
+              className="px-4 py-3 rounded-xl bg-purple-500/30 text-purple-200 font-medium shrink-0 active:scale-[0.98] border border-purple-500/30"
+            >
+              Valider
+            </button>
+          </div>
+          {codeError && (
+            <p className="text-xs text-red-400">{codeError}</p>
+          )}
         </div>
         
         {/* Séquence de touches (debug) */}
         {showSequence && keySequence.length > 0 && (
-          <div className="p-2 rounded bg-muted text-xs font-mono">
+          <div className="p-2 rounded bg-white/5 text-xs font-mono text-gray-400">
             {keySequence.join(' ')}
           </div>
         )}
@@ -159,7 +262,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-green-400">{getSecretName(secretId)}</p>
-                    <p className="text-xs text-muted-foreground">Débloqué !</p>
+                    <p className="text-xs text-gray-500">Débloqué !</p>
                   </div>
                   <Sparkles className="w-5 h-5 text-green-400 animate-pulse" />
                 </div>
@@ -171,28 +274,28 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
         {/* Secrets à découvrir */}
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-muted-foreground" />
+            <Lock className="w-4 h-4 text-gray-500" />
             Secrets Cachés
           </h3>
           <div className="space-y-2">
             {hiddenUnlocks.map(secret => (
               <div 
                 key={secret.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50 opacity-70"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 opacity-80"
               >
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-muted-foreground" />
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-muted-foreground">???</p>
+                  <p className="font-medium text-gray-500">???</p>
                   {secret.hint && (
-                    <p className="text-xs text-muted-foreground italic">
-                      "{secret.hint}"
+                    <p className="text-xs text-gray-500 italic">
+                      &quot;{secret.hint}&quot;
                     </p>
                   )}
                 </div>
                 {level < secret.levelRequired && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-gray-500">
                     Niv. {secret.levelRequired}
                   </span>
                 )}
@@ -204,7 +307,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
         {/* Easter Egg: Afficher la séquence */}
         <button
           onClick={() => setShowSequence(!showSequence)}
-          className="w-full p-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="w-full p-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
         >
           {showSequence ? 'Cacher' : 'Afficher'} la séquence
         </button>
@@ -217,7 +320,7 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
             <Sparkles className="w-6 h-6 text-green-400 animate-pulse" />
             <div>
               <p className="font-semibold text-green-400">Secret découvert !</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-400">
                 {getSecretName(discoveredCode)} est maintenant disponible
               </p>
             </div>

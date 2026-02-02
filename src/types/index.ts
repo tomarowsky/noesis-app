@@ -1,4 +1,4 @@
-// Types pour l'app NOESIS - Intelligence Élitiste
+// Types pour l'app NOESIS — Quiz, marchés & culture
 
 export interface UserProgress {
   level: number;
@@ -19,6 +19,24 @@ export interface UserStats {
   interactions: number;
   streakDays: number;
   lastVisit: string | null;
+  /** Quiz : réponses données */
+  quizAnswered: number;
+  /** Quiz : réponses correctes */
+  quizCorrect: number;
+  /** Quiz : série de bonnes réponses en cours */
+  quizStreak: number;
+  /** Quiz : meilleure série */
+  bestQuizStreak: number;
+  /** Quiz : séries de 5 complétées */
+  quizSeriesCompleted: number;
+  /** Quiz : bonnes réponses par catégorie (finance, science, etc.) — maîtrise */
+  categoryCorrect: Record<string, number>;
+  /** Quiz : date (YYYY-MM-DD) de la dernière série complétée — pour streak */
+  lastSeriesDate: string | null;
+  /** Quiz : jours consécutifs avec au moins une série complétée */
+  streakDaysQuiz: number;
+  /** Quiz : date du dernier bonus « défi du jour » (+15 XP) */
+  lastDailyBonusDate: string | null;
 }
 
 export interface Achievement {
@@ -27,13 +45,15 @@ export interface Achievement {
   description: string;
   icon: string;
   unlockedAt: string | null;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
   condition: AchievementCondition;
 }
 
 export interface AchievementCondition {
-  type: 'level' | 'xp' | 'secrets' | 'data_viewed' | 'time' | 'interactions' | 'streak' | 'custom';
+  type: 'level' | 'xp' | 'secrets' | 'data_viewed' | 'time' | 'interactions' | 'streak' | 'quiz_correct' | 'quiz_streak' | 'quiz_series' | 'category_correct' | 'custom';
   value: number;
+  /** Pour type 'category_correct' : clé de catégorie (finance, science, etc.) */
+  category?: string;
 }
 
 export interface UnlockedFeature {
@@ -126,4 +146,17 @@ export interface Reward {
   feature?: string;
   customization?: string;
   secret?: string;
+}
+
+/** Question de quiz (Q&A type jeu de société + actualité) */
+export interface QuizQuestion {
+  id: string;
+  category: 'finance' | 'science' | 'geopolitics' | 'tech' | 'culture' | 'general' | 'actualité';
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: 0 | 1 | 2 | 3;
+  difficulty: 1 | 2 | 3; // 1 = facile, 2 = moyen, 3 = difficile → impacte XP
+  explanation?: string;
+  /** Questions d'actualité : récentes, pour s'informer (Pro = plus présentes) */
+  isCurrentEvents?: boolean;
 }

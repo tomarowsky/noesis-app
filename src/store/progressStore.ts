@@ -3,14 +3,43 @@ import { persist } from 'zustand/middleware';
 import type { UserProgress, Achievement, UnlockedFeature, UserStats, Customizations } from '@/types';
 
 interface ProgressState extends UserProgress {
+  /** Abonnement Pro (données temps réel sans config, or/pétrole, etc.) */
+  isPremium: boolean;
+  /** Accès à vie : tout Pro + toutes les données débloquées + expérience exclusive */
+  isLifetime: boolean;
+  /** Ordre personnalisé des widgets sur le dashboard (ids). Vide = ordre par défaut. */
+  widgetOrder: string[];
+  /** Ids des widgets affichés sur l'écran principal. Vide = tous les débloqués. */
+  dashboardWidgetIds: string[];
+  /** Prénom de l'utilisateur (affiché dans "Bienvenue, …" sur le dashboard). Vide = "Initié". */
+  firstName: string;
+  /** Niveau de difficulté adaptatif du quiz (1.0–3.0) : mis à jour après chaque réponse pour proposer des questions pertinentes. */
+  quizAdaptiveLevel: number;
   // Actions
+  setFirstName: (value: string) => void;
+  /** Met à jour le niveau adaptatif après une réponse (bonne → +0.12, mauvaise → -0.18), borné [1, 3]. */
+  updateQuizAdaptiveLevel: (correct: boolean) => void;
+  setPremium: (value: boolean) => void;
+  setLifetime: (value: boolean) => void;
+  setWidgetOrder: (order: string[]) => void;
+  setDashboardWidgetIds: (ids: string[]) => void;
   addXp: (amount: number, source?: string) => void;
+  /** Enregistre une réponse au quiz : met à jour les stats (dont categoryCorrect, streak) et accorde l'XP. Optionnel : category pour la maîtrise. */
+  addQuizResult: (correct: boolean, difficulty: 1 | 2 | 3, category?: string) => { xpEarned: number; dailyBonusApplied?: boolean };
   checkLevelUp: () => boolean;
   unlockAchievement: (achievementId: string) => void;
   unlockFeature: (featureId: string) => void;
   discoverSecret: (secretId: string) => void;
+  /** Dernière découverte (pour afficher la modal "wow") — éphémère, non persisté */
+  lastDiscoveredSecretId: string | null;
+  clearLastDiscoveredSecret: () => void;
+  /** Dernier succès débloqué (pour toast) — éphémère, non persisté */
+  lastUnlockedAchievementId: string | null;
+  clearLastUnlockedAchievement: () => void;
   updateStats: (updates: Partial<UserStats>) => void;
   updateCustomizations: (updates: Partial<Customizations>) => void;
+  /** Rétablit thème, couleur, police, layout et effets aux valeurs par défaut. */
+  resetCustomizations: () => void;
   getProgressPercentage: () => number;
   getAvailableUnlocks: () => UnlockedFeature[];
   getHiddenUnlocks: () => UnlockedFeature[];
@@ -89,6 +118,106 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
     unlockedAt: null,
     rarity: 'mythic',
     condition: { type: 'secrets', value: 20 }
+  },
+  // Succès Quiz — récompensent l’engagement intellectuel
+  {
+    id: 'quiz_first',
+    name: 'Première Réponse',
+    description: 'Répondre correctement à votre première question au quiz',
+    icon: 'check-circle',
+    unlockedAt: null,
+    rarity: 'common',
+    condition: { type: 'quiz_correct', value: 1 }
+  },
+  {
+    id: 'quiz_ten',
+    name: 'Dix Bonnes Réponses',
+    description: 'Totaliser 10 bonnes réponses au quiz',
+    icon: 'target',
+    unlockedAt: null,
+    rarity: 'uncommon',
+    condition: { type: 'quiz_correct', value: 10 }
+  },
+  {
+    id: 'quiz_streak_3',
+    name: 'Série de 3',
+    description: 'Enchaîner 3 bonnes réponses d\'affilée au quiz',
+    icon: 'zap',
+    unlockedAt: null,
+    rarity: 'uncommon',
+    condition: { type: 'quiz_streak', value: 3 }
+  },
+  {
+    id: 'quiz_series',
+    name: 'Série Complète',
+    description: 'Terminer une série de 5 questions au quiz',
+    icon: 'award',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'quiz_series', value: 1 }
+  },
+  {
+    id: 'quiz_hundred',
+    name: 'Cent Bonnes Réponses',
+    description: 'Totaliser 100 bonnes réponses au quiz',
+    icon: 'target',
+    unlockedAt: null,
+    rarity: 'epic',
+    condition: { type: 'quiz_correct', value: 100 }
+  },
+  {
+    id: 'mastery_finance',
+    name: 'Maîtrise Finance',
+    description: '20 bonnes réponses en Finance',
+    icon: 'bar-chart-2',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'category_correct', value: 20, category: 'finance' }
+  },
+  {
+    id: 'mastery_science',
+    name: 'Maîtrise Science',
+    description: '20 bonnes réponses en Science',
+    icon: 'atom',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'category_correct', value: 20, category: 'science' }
+  },
+  {
+    id: 'mastery_geopolitics',
+    name: 'Maîtrise Géopolitique',
+    description: '20 bonnes réponses en Géopolitique',
+    icon: 'globe',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'category_correct', value: 20, category: 'geopolitics' }
+  },
+  {
+    id: 'mastery_tech',
+    name: 'Maîtrise Tech',
+    description: '20 bonnes réponses en Tech',
+    icon: 'cpu',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'category_correct', value: 20, category: 'tech' }
+  },
+  {
+    id: 'mastery_actualite',
+    name: 'Maîtrise Actualité',
+    description: '20 bonnes réponses en Actualité',
+    icon: 'globe',
+    unlockedAt: null,
+    rarity: 'rare',
+    condition: { type: 'category_correct', value: 20, category: 'actualité' }
+  },
+  {
+    id: 'streak_week',
+    name: 'Série de 7 Jours',
+    description: 'Compléter au moins une série de 5 questions pendant 7 jours consécutifs',
+    icon: 'flame',
+    unlockedAt: null,
+    rarity: 'epic',
+    condition: { type: 'streak', value: 7 }
   }
 ];
 
@@ -139,6 +268,11 @@ const INITIAL_UNLOCKS: UnlockedFeature[] = [
   { id: 'secret_illuminati', name: 'Illuminati', description: 'Accès aux théories du complot', category: 'secret', unlockedAt: '', levelRequired: 15, hidden: true, hint: 'L\'œil qui voit tout...' },
   { id: 'secret_time_travel', name: 'Voyage Temporel', description: 'Données historiques exclusives', category: 'secret', unlockedAt: '', levelRequired: 20, hidden: true, hint: '1.21 gigawatts...' },
   { id: 'secret_42', name: 'La Réponse', description: 'La réponse à tout', category: 'secret', unlockedAt: '', levelRequired: 42, hidden: true, hint: 'La réponse ultime...' },
+  { id: 'secret_triforce', name: 'Triforce', description: 'Le pouvoir en trois', category: 'secret', unlockedAt: '', levelRequired: 7, hidden: true, hint: 'Le pouvoir en trois...' },
+  { id: 'secret_pi', name: 'Pi', description: 'Le nombre transcendant', category: 'secret', unlockedAt: '', levelRequired: 3, hidden: true, hint: '3.14159...' },
+  { id: 'secret_omega', name: 'Oméga', description: 'La fin et le commencement', category: 'secret', unlockedAt: '', levelRequired: 25, hidden: true, hint: 'Dernière lettre...' },
+  { id: 'secret_iddqd', name: 'Mode Dieu (IDDQD)', description: 'Référence légendaire', category: 'secret', unlockedAt: '', levelRequired: 13, hidden: true, hint: 'Tapez comme en 1993...' },
+  { id: 'secret_moon', name: 'Lune', description: 'La nuit appelle', category: 'secret', unlockedAt: '', levelRequired: 5, hidden: true, hint: 'Quand la nuit tombe...' },
 ];
 
 const INITIAL_CUSTOMIZATIONS: Customizations = {
@@ -170,9 +304,118 @@ export const useProgressStore = create<ProgressState>()(
         timeSpent: 0,
         interactions: 0,
         streakDays: 0,
-        lastVisit: null
+        lastVisit: null,
+        quizAnswered: 0,
+        quizCorrect: 0,
+        quizStreak: 0,
+        bestQuizStreak: 0,
+        quizSeriesCompleted: 0,
+        categoryCorrect: {},
+        lastSeriesDate: null,
+        streakDaysQuiz: 0,
+        lastDailyBonusDate: null,
       },
       customizations: INITIAL_CUSTOMIZATIONS,
+      isPremium: false,
+      isLifetime: false,
+      widgetOrder: [],
+      dashboardWidgetIds: [],
+      firstName: '',
+      quizAdaptiveLevel: 1.5,
+      lastDiscoveredSecretId: null,
+      lastUnlockedAchievementId: null,
+
+      setFirstName: (value: string) => {
+        set({ firstName: (value ?? '').trim().slice(0, 50) });
+      },
+
+      setPremium: (value: boolean) => {
+        set({ isPremium: value });
+      },
+
+      setLifetime: (value: boolean) => {
+        set((s) => ({
+          isLifetime: value,
+          isPremium: value ? true : s.isPremium,
+        }));
+      },
+
+      setWidgetOrder: (order: string[]) => {
+        set({ widgetOrder: order });
+      },
+
+      setDashboardWidgetIds: (ids: string[]) => {
+        set({ dashboardWidgetIds: ids });
+      },
+
+      updateQuizAdaptiveLevel: (correct: boolean) => {
+        set((state) => {
+          const delta = correct ? 0.12 : -0.18;
+          const next = Math.max(1, Math.min(3, state.quizAdaptiveLevel + delta));
+          return { quizAdaptiveLevel: next };
+        });
+      },
+
+      addQuizResult: (correct: boolean, difficulty: 1 | 2 | 3, category?: string) => {
+        const state = get();
+        const newAnswered = state.stats.quizAnswered + 1;
+        const newCorrect = state.stats.quizCorrect + (correct ? 1 : 0);
+        const newStreak = correct ? state.stats.quizStreak + 1 : 0;
+        const newBestStreak = Math.max(state.stats.bestQuizStreak, newStreak);
+        const baseXp = correct ? (difficulty === 1 ? 15 : difficulty === 2 ? 25 : 35) : 0;
+        const streakBonus = correct && newStreak >= 3 ? 10 : 0;
+        const isSeriesComplete = newAnswered % 5 === 0;
+        const seriesBonus = correct && isSeriesComplete ? 25 : 0;
+
+        const today = new Date().toISOString().slice(0, 10);
+        let dailyBonusApplied = false;
+        let dailyBonusXp = 0;
+        if (isSeriesComplete && state.stats.lastDailyBonusDate !== today) {
+          dailyBonusXp = 15;
+          dailyBonusApplied = true;
+        }
+
+        const newCategoryCorrect = { ...state.stats.categoryCorrect };
+        if (category != null && correct) {
+          newCategoryCorrect[category] = (newCategoryCorrect[category] ?? 0) + 1;
+        }
+
+        let newLastSeriesDate = state.stats.lastSeriesDate;
+        let newStreakDaysQuiz = state.stats.streakDaysQuiz;
+        let newLastDailyBonusDate = state.stats.lastDailyBonusDate;
+        if (isSeriesComplete) {
+          newLastSeriesDate = today;
+          if (state.stats.lastSeriesDate === null) {
+            newStreakDaysQuiz = 1;
+          } else {
+            const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+            if (state.stats.lastSeriesDate === yesterday) {
+              newStreakDaysQuiz = state.stats.streakDaysQuiz + 1;
+            } else if (state.stats.lastSeriesDate !== today) {
+              newStreakDaysQuiz = 1;
+            }
+          }
+          if (dailyBonusApplied) newLastDailyBonusDate = today;
+        }
+
+        const xpEarned = baseXp + streakBonus + seriesBonus + dailyBonusXp;
+        set({
+          stats: {
+            ...state.stats,
+            quizAnswered: newAnswered,
+            quizCorrect: newCorrect,
+            quizStreak: newStreak,
+            bestQuizStreak: newBestStreak,
+            quizSeriesCompleted: correct && isSeriesComplete ? state.stats.quizSeriesCompleted + 1 : state.stats.quizSeriesCompleted,
+            categoryCorrect: newCategoryCorrect,
+            lastSeriesDate: newLastSeriesDate,
+            streakDaysQuiz: newStreakDaysQuiz,
+            lastDailyBonusDate: newLastDailyBonusDate,
+          },
+        });
+        if (xpEarned > 0) get().addXp(xpEarned, 'quiz');
+        return { xpEarned, dailyBonusApplied };
+      },
 
       addXp: (amount: number, _source?: string) => {
         set((state) => {
@@ -219,6 +462,23 @@ export const useProgressStore = create<ProgressState>()(
               case 'time':
                 shouldUnlock = state.stats.timeSpent >= ach.condition.value;
                 break;
+              case 'quiz_correct':
+                shouldUnlock = state.stats.quizCorrect >= ach.condition.value;
+                break;
+              case 'streak':
+                shouldUnlock = state.stats.streakDaysQuiz >= ach.condition.value;
+                break;
+              case 'quiz_streak':
+                shouldUnlock = state.stats.bestQuizStreak >= ach.condition.value;
+                break;
+              case 'quiz_series':
+                shouldUnlock = state.stats.quizSeriesCompleted >= ach.condition.value;
+                break;
+              case 'category_correct': {
+                const cat = (ach.condition as { category?: string }).category;
+                shouldUnlock = cat != null && (state.stats.categoryCorrect[cat] ?? 0) >= ach.condition.value;
+                break;
+              }
             }
             
             if (shouldUnlock) {
@@ -226,6 +486,10 @@ export const useProgressStore = create<ProgressState>()(
             }
             return ach;
           });
+          const firstNewlyUnlocked = updatedAchievements.find(
+            (ach, i) => !state.achievements[i]?.unlockedAt && ach.unlockedAt
+          );
+          const lastUnlockedAchievementId = firstNewlyUnlocked?.id ?? null;
           
           return {
             xp: remainingXp,
@@ -233,7 +497,8 @@ export const useProgressStore = create<ProgressState>()(
             xpToNextLevel: xpNeeded,
             level: newLevel,
             unlockedFeatures: updatedUnlocks,
-            achievements: updatedAchievements
+            achievements: updatedAchievements,
+            lastUnlockedAchievementId,
           };
         });
       },
@@ -264,34 +529,27 @@ export const useProgressStore = create<ProgressState>()(
       },
 
       discoverSecret: (secretId: string) => {
-        set((state) => {
-          if (state.discoveredSecrets.includes(secretId)) return state;
-          
-          const newSecrets = [...state.discoveredSecrets, secretId];
-          
-          // Débloquer la fonctionnalité secrète
-          const updatedUnlocks = state.unlockedFeatures.map(feature =>
-            feature.id === secretId
-              ? { ...feature, unlockedAt: new Date().toISOString() }
-              : feature
-          );
-          
-          // Bonus XP pour avoir trouvé un secret
-          const secretUnlock = updatedUnlocks.find(f => f.id === secretId);
-          if (secretUnlock) {
-            get().addXp(50, 'secret_discovery');
-          }
-          
-          return {
-            discoveredSecrets: newSecrets,
-            unlockedFeatures: updatedUnlocks,
-            stats: {
-              ...state.stats,
-              secretsFound: newSecrets.length
-            }
-          };
+        const state = get();
+        if (state.discoveredSecrets.includes(secretId)) return;
+        const newSecrets = [...state.discoveredSecrets, secretId];
+        const updatedUnlocks = state.unlockedFeatures.map(feature =>
+          feature.id === secretId
+            ? { ...feature, unlockedAt: new Date().toISOString() }
+            : feature
+        );
+        set({
+          discoveredSecrets: newSecrets,
+          unlockedFeatures: updatedUnlocks,
+          lastDiscoveredSecretId: secretId,
+          stats: { ...state.stats, secretsFound: newSecrets.length }
         });
+        // Bonus XP en dehors du set() pour éviter boucle / mises à jour en cascade
+        get().addXp(50, 'secret_discovery');
       },
+
+      clearLastDiscoveredSecret: () => set({ lastDiscoveredSecretId: null }),
+
+      clearLastUnlockedAchievement: () => set({ lastUnlockedAchievementId: null }),
 
       updateStats: (updates: Partial<UserStats>) => {
         set((state) => ({
@@ -303,6 +561,10 @@ export const useProgressStore = create<ProgressState>()(
         set((state) => ({
           customizations: { ...state.customizations, ...updates }
         }));
+      },
+
+      resetCustomizations: () => {
+        set({ customizations: INITIAL_CUSTOMIZATIONS });
       },
 
       getProgressPercentage: () => {
@@ -333,21 +595,105 @@ export const useProgressStore = create<ProgressState>()(
           achievements: INITIAL_ACHIEVEMENTS,
           unlockedFeatures: INITIAL_UNLOCKS,
           discoveredSecrets: [],
+          lastDiscoveredSecretId: null,
+          lastUnlockedAchievementId: null,
           stats: {
             dataPointsViewed: 0,
             secretsFound: 0,
             timeSpent: 0,
             interactions: 0,
             streakDays: 0,
-            lastVisit: null
+            lastVisit: null,
+            quizAnswered: 0,
+            quizCorrect: 0,
+            quizStreak: 0,
+            bestQuizStreak: 0,
+            quizSeriesCompleted: 0,
+            categoryCorrect: {},
+            lastSeriesDate: null,
+            streakDaysQuiz: 0,
+            lastDailyBonusDate: null,
           },
-          customizations: INITIAL_CUSTOMIZATIONS
+          customizations: INITIAL_CUSTOMIZATIONS,
+          isPremium: false,
+          isLifetime: false,
+          widgetOrder: [],
+          dashboardWidgetIds: [],
+          firstName: '',
+          quizAdaptiveLevel: 1.5,
         });
       }
     }),
     {
       name: 'noesis-progress',
-      version: 1
+      version: 12,
+      partialize: (state) => {
+        const { lastDiscoveredSecretId: _1, lastUnlockedAchievementId: _2, ...rest } = state;
+        return rest;
+      },
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as { stats?: Partial<UserStats>; achievements?: Achievement[]; isPremium?: boolean; firstName?: string };
+        if (version < 2 && state?.stats) {
+          state.stats = {
+            ...state.stats,
+            quizAnswered: state.stats.quizAnswered ?? 0,
+            quizCorrect: state.stats.quizCorrect ?? 0,
+            quizStreak: state.stats.quizStreak ?? 0,
+            bestQuizStreak: state.stats.bestQuizStreak ?? 0,
+            quizSeriesCompleted: state.stats.quizSeriesCompleted ?? 0,
+          };
+        }
+        if (version < 3 && state?.achievements) {
+          const existingIds = new Set(state.achievements.map(a => a.id));
+          const toAdd = INITIAL_ACHIEVEMENTS.filter(a => !existingIds.has(a.id));
+          state.achievements = [...state.achievements, ...toAdd];
+        }
+        if (version < 4) {
+          (state as { isPremium?: boolean }).isPremium = false;
+        }
+        if (version < 5 && state?.stats) {
+          state.stats = {
+            ...state.stats,
+            categoryCorrect: state.stats.categoryCorrect ?? {},
+            lastSeriesDate: state.stats.lastSeriesDate ?? null,
+            streakDaysQuiz: state.stats.streakDaysQuiz ?? 0,
+            lastDailyBonusDate: state.stats.lastDailyBonusDate ?? null,
+          };
+        }
+        if (version < 5 && state?.achievements) {
+          const existingIds = new Set(state.achievements.map(a => a.id));
+          const toAdd = INITIAL_ACHIEVEMENTS.filter(a => !existingIds.has(a.id));
+          state.achievements = [...state.achievements, ...toAdd];
+        }
+        if (version < 6) {
+          (state as { widgetOrder?: string[] }).widgetOrder = [];
+        }
+        if (version < 7) {
+          (state as { dashboardWidgetIds?: string[] }).dashboardWidgetIds = [];
+        }
+        if (version < 8) {
+          (state as { firstName?: string }).firstName = '';
+        }
+        if (version < 9 && state?.achievements) {
+          const existingIds = new Set(state.achievements.map(a => a.id));
+          const toAdd = INITIAL_ACHIEVEMENTS.filter(a => !existingIds.has(a.id));
+          state.achievements = [...state.achievements, ...toAdd];
+        }
+        if (version < 10) {
+          (state as { isLifetime?: boolean }).isLifetime = false;
+        }
+        if (version < 11) {
+          (state as { quizAdaptiveLevel?: number }).quizAdaptiveLevel = 1.5;
+        }
+        // Pathway cartes : niveau >= 1 pour déblocage ; niveau 0 ou négatif = corruption → ramener à 1
+        const s = state as { level?: number; xp?: number; xpToNextLevel?: number };
+        if (typeof s.level === 'number' && s.level < 1) {
+          s.level = 1;
+          s.xp = s.xp ?? 0;
+          s.xpToNextLevel = s.xpToNextLevel ?? calculateXpToNextLevel(1);
+        }
+        return persisted;
+      },
     }
   )
 );

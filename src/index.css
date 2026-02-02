@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* NOESIS - Intelligence Élitiste - Design System */
+/* NOESIS — Quiz, marchés & culture — Design System */
 
 :root {
   /* Couleurs de base */
   --background: 0 0% 4%;
   --foreground: 0 0% 98%;
   
-  /* Couleurs premium - Élitistes */
+  /* Couleurs premium */
   --primary: 220 90% 56%;
   --primary-foreground: 0 0% 100%;
   
@@ -94,6 +94,39 @@
   --card: 0 0% 5%;
 }
 
+/* Thème Minimaliste (niveau 7) */
+.theme-minimalist {
+  --primary: 0 0% 45%;
+  --accent: 0 0% 45%;
+  --ring: 0 0% 45%;
+  --background: 0 0% 6%;
+  --foreground: 0 0% 90%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 55%;
+  --card: 0 0% 8%;
+  --border: 0 0% 18%;
+}
+
+/* Polices personnalisables (appliquées sur body) */
+.font-style-modern {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.font-style-classic {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+.font-style-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Désactivation des animations (accessibilité / préférence utilisateur) */
+.no-motion,
+.no-motion * {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
 * {
   border-color: hsl(var(--border));
 }
@@ -114,6 +147,11 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Logo app dans le header — fondu d’apparition pour éviter un rendu harsh */
+.app-logo-header {
+  animation: fadeInScale 0.5s ease-out;
 }
 
 /* Animations premium */
@@ -202,6 +240,15 @@ body {
   50% {
     text-shadow: 0 0 30px hsl(var(--primary) / 0.8), 0 0 60px hsl(var(--primary) / 0.4);
   }
+}
+
+/* Reflet / exclusivité — paywall Lifetime */
+@keyframes lifetime-shine {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.lifetime-shine-reflect {
+  animation: lifetime-shine 5s ease-in-out infinite;
 }
 
 @keyframes matrix-rain {
@@ -373,6 +420,12 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
+}
+
+/* Zone principale scrollable (Dashboard, Explorer, Profil) — scroll fluide iOS */
+.main-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 /* Safe area pour iOS */

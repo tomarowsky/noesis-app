@@ -81,7 +81,6 @@ export function DataWidget({ widget, isLocked = false }: DataWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [widgetData, setWidgetData] = useState(widget.data);
-  const addXp = useProgressStore(state => state.addXp);
   const updateStats = useProgressStore(state => state.updateStats);
   
   // Rafraîchir les données
@@ -92,9 +91,6 @@ export function DataWidget({ widget, isLocked = false }: DataWidgetProps) {
     setTimeout(() => {
       setWidgetData(generateWidgetData(widget.category, widget.rarity));
       setIsRefreshing(false);
-      
-      // XP pour avoir rafraîchi les données
-      addXp(2, 'data_refresh');
       updateStats({ dataPointsViewed: useProgressStore.getState().stats.dataPointsViewed + 1 });
     }, 800);
   };

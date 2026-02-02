@@ -9,6 +9,14 @@ npm install
 npm run dev
 ```
 
+## Données en temps réel
+
+- **Sans clé** : Bitcoin, Ethereum (CoinGecko), EUR/USD (Frankfurter).
+- **Avec clé Alpha Vantage (gratuite)** : S&P 500, NASDAQ, CAC 40 affichent le cours réel (comme sur Boursorama).
+  1. Crée une clé sur [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key).
+  2. Copie `.env.example` en `.env` et ajoute `VITE_ALPHAVANTAGE_API_KEY=ta_cle`.
+  3. Redémarre `npm run dev`.
+
 ## Pousser sur GitHub (première fois)
 
 1. Sur [github.com](https://github.com/new), crée un **nouveau** dépôt (ex. `noesis-app`), **sans** initialiser avec README / .gitignore.
