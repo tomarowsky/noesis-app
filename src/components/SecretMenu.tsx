@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useProgressStore } from '@/store/progressStore';
 import { 
   X, 
@@ -51,6 +50,13 @@ const TEXT_CODES: Record<string, string> = {
   'iddqd': 'secret_iddqd',
   'lune': 'secret_moon',
   'moon': 'secret_moon',
+  'nexus': 'secret_nexus',
+  'cosmos': 'secret_cosmos',
+  'infini': 'secret_infini',
+  'infinity': 'secret_infini',
+  'easter': 'secret_easter',
+  'oeuf': 'secret_easter',
+  'egg': 'secret_easter',
 };
 
 export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
@@ -59,9 +65,28 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
   const [discoveredCode, setDiscoveredCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  const { discoveredSecrets, discoverSecret, level } = useProgressStore();
-  
-  const hiddenUnlocks = useProgressStore(state => state.getHiddenUnlocks());
+  const openedAtRef = useRef<number>(0);
+  const [blockClicksUntil, setBlockClicksUntil] = useState(0);
+  const { discoverSecret, level } = useProgressStore();
+  const discoveredSecretsRaw = useProgressStore(state => state.discoveredSecrets);
+  const unlockedFeaturesRaw = useProgressStore(state => state.unlockedFeatures);
+  const discoveredSecrets = Array.isArray(discoveredSecretsRaw) ? discoveredSecretsRaw : [];
+  const hiddenUnlocks = (() => {
+    const features = Array.isArray(unlockedFeaturesRaw) ? unlockedFeaturesRaw : [];
+    return features.filter(f =>
+      f != null && typeof f === 'object' && Boolean((f as { hidden?: boolean }).hidden) && !(f as { unlockedAt?: string }).unlockedAt
+    );
+  })();
+
+  useEffect(() => {
+    if (isOpen) {
+      const now = Date.now();
+      openedAtRef.current = now;
+      setBlockClicksUntil(now + 1200);
+      const t = setTimeout(() => setBlockClicksUntil(0), 1200);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
 
   const tryUnlockByCode = (raw: string) => {
     const normalized = raw.trim().toLowerCase();
@@ -134,6 +159,10 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       case 'secret_omega': return <Key className="w-5 h-5" />;
       case 'secret_iddqd': return <Zap className="w-5 h-5" />;
       case 'secret_moon': return <Sparkles className="w-5 h-5" />;
+      case 'secret_nexus': return <Zap className="w-5 h-5" />;
+      case 'secret_cosmos': return <Eye className="w-5 h-5" />;
+      case 'secret_infini': return <Sparkles className="w-5 h-5" />;
+      case 'secret_easter': return <Sparkles className="w-5 h-5" />;
       default: return <Key className="w-5 h-5" />;
     }
   };
@@ -152,26 +181,41 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
       'secret_omega': 'Oméga',
       'secret_iddqd': 'Mode Dieu (IDDQD)',
       'secret_moon': 'Lune',
+      'secret_nexus': 'Nexus',
+      'secret_cosmos': 'Cosmos',
+      'secret_infini': 'Infini',
+      'secret_easter': 'Œuf de Pâques',
     };
     return names[secretId] || secretId;
   };
   
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  if (!containerRef.current && typeof document !== 'undefined') {
-    containerRef.current = document.createElement('div');
-    containerRef.current.id = 'secret-menu-portal';
-    document.body.appendChild(containerRef.current);
-  }
-
   if (!isOpen) return null;
 
-  const modal = (
+  const blockClicks = Date.now() < blockClicksUntil;
+
+  return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="secret-menu-title"
-      className="fixed inset-0 z-[200] flex flex-col bg-[#0c0c0c] safe-area-top safe-area-bottom"
-      style={{ minHeight: '100vh' }}
+      className="fixed inset-0 z-[9999] flex flex-col bg-[#0c0c0c] safe-area-top safe-area-bottom"
+      style={{
+        minHeight: '100vh',
+        isolation: 'isolate',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
+      }}
+      onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onTouchStart={(e) => { e.stopPropagation(); }}
+      onPointerDown={(e) => { e.stopPropagation(); if (blockClicks) e.preventDefault(); }}
+      onPointerUp={(e) => { e.stopPropagation(); if (blockClicks) e.preventDefault(); }}
     >
       {/* Header — toujours visible */}
       <div className="flex shrink-0 items-center justify-between p-4 border-b border-white/10 bg-[#111111]">
@@ -187,7 +231,11 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
           </div>
         </div>
         <button
-          onClick={onClose}
+          type="button"
+          onClick={() => {
+            if (Date.now() - openedAtRef.current < 500) return;
+            onClose();
+          }}
           className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
           aria-label="Fermer"
         >
@@ -200,17 +248,29 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4 main-scroll safe-area-bottom bg-[#0c0c0c]"
         style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}
       >
-        {/* Instructions */}
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-          <p className="text-sm text-gray-400 mb-2">
-            Des secrets sont cachés dans l'app. Trouvez les codes pour débloquer des fonctionnalités exclusives.
-          </p>
-          <p className="text-xs text-purple-300">
-            Sur iPhone : entrez le code ci-dessous (le clavier s'affiche). Sur ordinateur : vous pouvez aussi taper au clavier.
+        {/* Comment ouvrir ce menu */}
+        <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+          <p className="text-xs font-semibold text-purple-300 mb-1">Comment ouvrir ce menu ?</p>
+          <p className="text-sm text-gray-300">
+            Maintenez appuyé <strong>~1 seconde</strong> sur le <strong>logo de l'app</strong> (en haut à gauche) pour rouvrir ce menu à tout moment.
           </p>
         </div>
 
-        {/* Champ de saisie — iOS : clavier virtuel ; desktop : optionnel */}
+        {/* Où trouver les codes — découvrable sans spoiler */}
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+          <p className="text-xs font-semibold text-gray-400 mb-2">Où chercher les indices ?</p>
+          <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
+            <li><strong className="text-gray-400">Quiz</strong> — Les explications et certaines réponses cachent des mots ou nombres.</li>
+            <li><strong className="text-gray-400">Données & Explorer</strong> — Les descriptions et insights des widgets peuvent contenir des indices.</li>
+            <li><strong className="text-gray-400">Culture</strong> — Films, jeux vidéo, science : des références connues ouvrent des portes.</li>
+            <li><strong className="text-gray-400">Nombres célèbres</strong> — 42, 314… et d'autres chiffres de la culture geek.</li>
+          </ul>
+          <p className="text-[11px] text-purple-300/90 mt-2 italic">
+            Tape le code dans le champ ci-dessous (minuscules, sans espaces). Chaque secret a un <strong>niveau minimum</strong> pour être débloqué. Les cartes &quot;Secrets Cachés&quot; plus bas affichent un indice — le code à taper en découle souvent.
+          </p>
+        </div>
+
+        {/* Champ de saisie */}
         <div className="space-y-2">
           <label htmlFor="secret-code" className="text-sm font-medium text-gray-400">
             Entrer un code
@@ -295,9 +355,9 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
             Secrets Cachés
           </h3>
           <div className="space-y-2">
-            {hiddenUnlocks.map(secret => (
+            {hiddenUnlocks.map((secret, idx) => (
               <div 
-                key={secret.id}
+                key={secret?.id ?? `secret-${idx}`}
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 opacity-80"
               >
                 <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
@@ -305,13 +365,13 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-gray-500">???</p>
-                  {secret.hint && (
+                  {secret?.hint && (
                     <p className="text-xs text-gray-500 italic">
                       &quot;{secret.hint}&quot;
                     </p>
                   )}
                 </div>
-                {level < secret.levelRequired && (
+                {secret?.levelRequired != null && level < secret.levelRequired && (
                   <span className="text-xs text-gray-500">
                     Niv. {secret.levelRequired}
                   </span>
@@ -344,8 +404,14 @@ export function SecretMenu({ isOpen, onClose }: SecretMenuProps) {
           </div>
         </div>
       )}
+      {/* Couche anti-clic synthétique : au-dessus de tout, bloque 1,2 s après ouverture */}
+      {blockClicks && (
+        <div
+          className="absolute inset-0 z-[10000]"
+          style={{ pointerEvents: 'auto' }}
+          aria-hidden
+        />
+      )}
     </div>
   );
-
-  return containerRef.current ? createPortal(modal, containerRef.current) : modal;
 }

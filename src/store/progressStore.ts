@@ -273,6 +273,10 @@ const INITIAL_UNLOCKS: UnlockedFeature[] = [
   { id: 'secret_omega', name: 'Oméga', description: 'La fin et le commencement', category: 'secret', unlockedAt: '', levelRequired: 25, hidden: true, hint: 'Dernière lettre...' },
   { id: 'secret_iddqd', name: 'Mode Dieu (IDDQD)', description: 'Référence légendaire', category: 'secret', unlockedAt: '', levelRequired: 13, hidden: true, hint: 'Tapez comme en 1993...' },
   { id: 'secret_moon', name: 'Lune', description: 'La nuit appelle', category: 'secret', unlockedAt: '', levelRequired: 5, hidden: true, hint: 'Quand la nuit tombe...' },
+  { id: 'secret_nexus', name: 'Nexus', description: 'Le lien entre tout', category: 'secret', unlockedAt: '', levelRequired: 8, hidden: true, hint: 'Le point de jonction...' },
+  { id: 'secret_cosmos', name: 'Cosmos', description: "L'ordre du monde", category: 'secret', unlockedAt: '', levelRequired: 12, hidden: true, hint: "L'univers en un mot..." },
+  { id: 'secret_infini', name: 'Infini', description: 'Sans fin', category: 'secret', unlockedAt: '', levelRequired: 18, hidden: true, hint: 'Le huit couché...' },
+  { id: 'secret_easter', name: 'Œuf de Pâques', description: 'Caché pour les curieux', category: 'secret', unlockedAt: '', levelRequired: 1, hidden: true, hint: 'Easter egg en anglais...' },
 ];
 
 const INITIAL_CUSTOMIZATIONS: Customizations = {
@@ -580,11 +584,16 @@ export const useProgressStore = create<ProgressState>()(
       },
 
       getHiddenUnlocks: () => {
-        const state = get();
-        const features = state.unlockedFeatures ?? [];
-        return features.filter(f =>
-          f.hidden && !f.unlockedAt
-        );
+        try {
+          const state = get();
+          const features = state.unlockedFeatures ?? [];
+          if (!Array.isArray(features)) return [];
+          return features.filter((f): f is UnlockedFeature =>
+            f != null && typeof f === 'object' && Boolean(f.hidden) && !f.unlockedAt
+          );
+        } catch {
+          return [];
+        }
       },
 
       resetProgress: () => {

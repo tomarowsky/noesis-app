@@ -52,4 +52,20 @@ export const SECRET_DISCOVERY: Record<string, { wowMessage: string; benefit: str
     wowMessage: 'La lune veille. Vous êtes des noctambules.',
     benefit: 'Lune débloquée',
   },
+  secret_nexus: {
+    wowMessage: 'Le nexus relie tout. Vous voyez les connexions.',
+    benefit: 'Nexus débloqué',
+  },
+  secret_cosmos: {
+    wowMessage: "L'ordre du cosmos. Vous pensez grand.",
+    benefit: 'Cosmos débloqué',
+  },
+  secret_infini: {
+    wowMessage: "L'infini n'a pas de fin. Vous allez au bout.",
+    benefit: 'Infini débloqué',
+  },
+  secret_easter: {
+    wowMessage: "Œuf de Pâques trouvé ! Vous avez l'œil.",
+    benefit: 'Œuf de Pâques débloqué',
+  },
 };

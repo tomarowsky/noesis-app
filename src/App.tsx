@@ -90,6 +90,7 @@ import { PaywallModal } from '@/components/PaywallModal';
 import { LifetimePaywallModal } from '@/components/LifetimePaywallModal';
 import { CustomizationPanel } from '@/components/CustomizationPanel';
 import { SecretMenu } from '@/components/SecretMenu';
+import { SecretMenuErrorBoundary } from '@/components/SecretMenuErrorBoundary';
 import { ParticleBackground } from '@/components/ParticleBackground';
 import { QUIZ_CATEGORY_LABELS } from '@/data/quizQuestions';
 import { hexToHsl } from '@/lib/utils';
@@ -2421,8 +2422,8 @@ function PrivacyPolicyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 }
 
 // Modal Paramètres
-function SettingsModal({ isOpen, onClose, onOpenPaywall, onOpenLifetimePaywall, onOpenPrivacy }: { isOpen: boolean; onClose: () => void; onOpenPaywall?: () => void; onOpenLifetimePaywall?: () => void; onOpenPrivacy: () => void }) {
-  const { firstName, setFirstName, isPremium, isLifetime, resetProgress } = useProgressStore();
+function SettingsModal({ isOpen, onClose, onOpenPaywall, onOpenLifetimePaywall, onOpenPrivacy, effectivePremium, effectiveLifetime }: { isOpen: boolean; onClose: () => void; onOpenPaywall?: () => void; onOpenLifetimePaywall?: () => void; onOpenPrivacy: () => void; effectivePremium: boolean; effectiveLifetime: boolean }) {
+  const { firstName, setFirstName, resetProgress } = useProgressStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleExportData = () => {
@@ -2465,12 +2466,12 @@ function SettingsModal({ isOpen, onClose, onOpenPaywall, onOpenLifetimePaywall, 
         {onOpenPaywall && (
           <div className="p-4 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent">
             <p className="font-medium text-white text-sm mb-2">Abonnement</p>
-            {isLifetime ? (
+            {effectiveLifetime ? (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-amber-500/30 text-amber-200">Membre à vie</span>
                 <span className="text-xs text-gray-400">Tout débloqué, pour toujours.</span>
               </div>
-            ) : isPremium ? (
+            ) : effectivePremium ? (
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-400">Vous êtes Pro</span>
                 {onOpenLifetimePaywall && (
@@ -2954,6 +2955,7 @@ export default function App() {
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [devLevelOverride, setDevLevelOverride] = useState<number | null>(null);
   const [devLifetimeOverride, setDevLifetimeOverride] = useState(false);
+  const [devPremiumOverride, setDevPremiumOverride] = useState<boolean | null>(null);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [devUnlocked, setDevUnlocked] = useState(false);
   const [showDevUnlockPrompt, setShowDevUnlockPrompt] = useState(false);
@@ -2975,9 +2977,10 @@ export default function App() {
   const secretMenuOpenedAtRef = useRef<number>(0);
 
   // Pathway cartes : déblocage strict par niveau — niveau effectif >= 1 (corruption / état invalide)
-  // Mode développeur : devLevelOverride remplace level ; devLifetimeOverride = prévisualiser comme abonnement Lifetime (tout débloqué)
+  // Mode développeur : devLevelOverride remplace level ; devLifetimeOverride / devPremiumOverride = prévisualiser abonnement (réversible)
   const effectiveLevel = Math.max(1, devLevelOverride ?? level);
-  const effectiveLifetime = isLifetime || devLifetimeOverride;
+  const effectiveLifetime = devLifetimeOverride || (devPremiumOverride === null && isLifetime);
+  const effectivePremium = devLifetimeOverride || (devPremiumOverride !== null ? devPremiumOverride : isPremium);
   const getUnlockedWidgets = () => (effectiveLifetime ? WIDGETS : WIDGETS.filter(w => w.levelRequired <= effectiveLevel));
   const getOrderedUnlockedWidgets = (): DataWidget[] => {
     const unlocked = getUnlockedWidgets();
@@ -3146,6 +3149,7 @@ export default function App() {
                   logoLongPressRef.current = null;
                 }
               }}
+              onContextMenu={(e) => e.preventDefault()}
               onTouchCancel={() => {
                 if (logoLongPressRef.current) {
                   clearTimeout(logoLongPressRef.current);
@@ -3322,7 +3326,7 @@ export default function App() {
             </button>
 
             {/* CTA Pro — données temps réel ; discardable pour nettoyer, réapparaît au retour sur le dashboard (gratuit) */}
-            {!isPremium && !dashboardDiscardedPro && (
+            {!effectivePremium && !dashboardDiscardedPro && (
               <div className="relative mb-6 group">
                 <button
                   type="button"
@@ -3422,7 +3426,7 @@ export default function App() {
                 </div>
               )}
               <div className="text-[10px] text-gray-500 mb-3 space-y-1">
-                {isPremium ? (
+                {effectivePremium ? (
                   <p><span className="text-emerald-400/90">Pro</span> : toutes les données marchés affichées ici sont en temps réel (indices, or, pétrole inclus).</p>
                 ) : hasAlphaVantageKey() ? (
                   <>
@@ -3437,7 +3441,7 @@ export default function App() {
                 )}
               </div>
               {/* Rappel Pro soft (une fois par session, après quelques consultations) */}
-              {!isPremium && stats.dataPointsViewed >= 3 && !proReminderDismissed && (
+              {!effectivePremium && stats.dataPointsViewed >= 3 && !proReminderDismissed && (
                 <div className="mb-3 py-2.5 px-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2">
                   <p className="text-[11px] text-amber-200/90">
                     Vous consultez des données indicatives. En Pro : tout en temps réel.
@@ -3734,7 +3738,7 @@ export default function App() {
                     <Settings className="w-4 h-4 text-gray-400" />
                     Réglages
                   </button>
-                  {!isLifetime && (
+                  {!effectiveLifetime && (
                     <button
                       type="button"
                       onClick={() => setShowLifetimePaywall(true)}
@@ -3858,7 +3862,7 @@ export default function App() {
               </div>
             </div>
             {/* Pro / Lifetime — statut et accès à vie (visible ici, pas caché dans Réglages) */}
-            {(isPremium || isLifetime) ? (
+            {(effectivePremium || effectiveLifetime) ? (
               <div className={cn(
                 'rounded-xl p-4 border',
                 'bg-amber-500/10 border-amber-500/30'
@@ -3871,17 +3875,17 @@ export default function App() {
                     <div>
                       <p className="font-semibold text-white text-sm">{BRAND.proName}</p>
                       <p className="text-xs text-gray-500">
-                        {isLifetime ? 'Tout débloqué — Membre à vie' : 'Données temps réel sans config'}
+                        {effectiveLifetime ? 'Tout débloqué — Membre à vie' : 'Données temps réel sans config'}
                       </p>
                     </div>
                   </div>
-                  {isLifetime ? (
+                  {effectiveLifetime ? (
                     <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-amber-500/30 text-amber-200">Membre à vie</span>
                   ) : (
                     <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-amber-500/20 text-amber-300">Pro</span>
                   )}
                 </div>
-                {!isLifetime && (
+                {!effectiveLifetime && (
                   <button
                     type="button"
                     onClick={() => setShowLifetimePaywall(true)}
@@ -4059,18 +4063,18 @@ export default function App() {
         <div className="fixed bottom-24 left-4 right-4 z-[45] max-w-sm mx-auto rounded-xl border border-amber-500/40 bg-[#0a0a0a] shadow-xl shadow-amber-500/10 p-4 safe-area-bottom">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-amber-200">Mode développeur</span>
-            <button type="button" onClick={() => { setShowDevPanel(false); setDevLevelOverride(null); setDevLifetimeOverride(false); }} className="p-1 rounded hover:bg-white/10 text-gray-400" aria-label="Fermer">
+            <button type="button" onClick={() => { setShowDevPanel(false); setDevLevelOverride(null); setDevLifetimeOverride(false); setDevPremiumOverride(null); }} className="p-1 rounded hover:bg-white/10 text-gray-400" aria-label="Fermer">
               <X className="w-5 h-5" />
             </button>
           </div>
           <p className="text-[10px] text-gray-500 mb-2">
-            Prévisualiser l’UI : niveau (déblocage progressif) ou Lifetime (tout débloqué, comme l'abonnement à vie).
+            Prévisualiser l’UI : niveau et abonnement (gratuit / premium / lifetime). Réversible.
           </p>
           <div className="flex items-center gap-2 mb-3">
-            <label htmlFor="dev-level" className="text-xs text-gray-400 shrink-0">Prévisualiser :</label>
+            <label htmlFor="dev-level" className="text-xs text-gray-400 shrink-0 w-20">Niveau :</label>
             <select
               id="dev-level"
-              value={devLifetimeOverride ? 'lifetime' : (devLevelOverride ?? '')}
+              value={devLifetimeOverride ? 'lifetime' : (devLevelOverride != null ? String(devLevelOverride) : '')}
               onChange={(e) => {
                 const v = e.target.value;
                 if (v === 'lifetime') {
@@ -4088,15 +4092,41 @@ export default function App() {
             >
               <option value="">Réel (niveau {level})</option>
               {Array.from({ length: Math.max(50, ...WIDGETS.map(w => w.levelRequired)) }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>Niveau {n}</option>
+                <option key={n} value={String(n)}>Niveau {n}</option>
               ))}
               <option value="lifetime">Lifetime — tout débloqué</option>
             </select>
           </div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-gray-400 shrink-0 w-20">Abonnement :</span>
+            <div className="flex gap-1 flex-1">
+              <button
+                type="button"
+                onClick={() => { setDevPremiumOverride(false); setDevLifetimeOverride(false); }}
+                className={cn('flex-1 py-2 rounded-lg text-xs font-medium', devPremiumOverride === false && !devLifetimeOverride ? 'bg-amber-500/30 text-amber-200 border border-amber-500/40' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-transparent')}
+              >
+                Gratuit
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDevPremiumOverride(true); setDevLifetimeOverride(false); }}
+                className={cn('flex-1 py-2 rounded-lg text-xs font-medium', devPremiumOverride === true && !devLifetimeOverride ? 'bg-amber-500/30 text-amber-200 border border-amber-500/40' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-transparent')}
+              >
+                Premium
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDevPremiumOverride(true); setDevLifetimeOverride(true); }}
+                className={cn('flex-1 py-2 rounded-lg text-xs font-medium', devLifetimeOverride ? 'bg-amber-500/30 text-amber-200 border border-amber-500/40' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-transparent')}
+              >
+                Lifetime
+              </button>
+            </div>
+          </div>
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setDevLevelOverride(null); setDevLifetimeOverride(false); }}
+              onClick={() => { setDevLevelOverride(null); setDevLifetimeOverride(false); setDevPremiumOverride(null); }}
               className="flex-1 py-2 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20"
             >
               Réel (niveau {level})
@@ -4140,7 +4170,9 @@ export default function App() {
       {/* Modals */}
       <AchievementsModal isOpen={showAchievements} onClose={() => setShowAchievements(false)} />
       <CustomizationPanel isOpen={showCustomize} onClose={() => setShowCustomize(false)} />
-      {showSecretMenu && <SecretMenu isOpen onClose={() => setShowSecretMenu(false)} />}
+      <SecretMenuErrorBoundary isOpen={showSecretMenu} onClose={() => setShowSecretMenu(false)}>
+        <SecretMenu isOpen={showSecretMenu} onClose={() => setShowSecretMenu(false)} />
+      </SecretMenuErrorBoundary>
       <ChallengesModal
         isOpen={showChallenges}
         onClose={() => setShowChallenges(false)}
@@ -4157,6 +4189,8 @@ export default function App() {
         onOpenPaywall={() => { setShowSettings(false); setShowPaywall(true); }}
         onOpenLifetimePaywall={() => { setShowSettings(false); setShowLifetimePaywall(true); }}
         onOpenPrivacy={() => { setShowSettings(false); setShowPrivacy(true); }}
+        effectivePremium={effectivePremium}
+        effectiveLifetime={effectiveLifetime}
       />
       <LifetimePaywallModal isOpen={showLifetimePaywall} onClose={() => setShowLifetimePaywall(false)} />
       <PrivacyPolicyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
